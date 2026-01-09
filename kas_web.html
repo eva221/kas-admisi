@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Aplikasi Kas Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        button { padding: 8px 12px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; }
+        input, select { padding: 6px; margin: 5px; }
+        .admin { background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 20px; }
+        .error { color: red; }
+        .bold { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Aplikasi Keluar Masuk Uang Kas</h1>
+
+    <!-- LOGIN -->
+    <div id="login">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="login-error" class="error"></p>
+    </div>
+
+    <!-- APP -->
+    <div id="app" class="hidden">
+        <h2 id="role-title"></h2>
+        <p>Dana Awal: <b id="danaAwalText">Rp 0</b></p>
+        <p>Total Pemasukan: <b id="totalMasukText">Rp 0</b></p>
+        <p>Total Pengeluaran: <b id="totalKeluarText">Rp 0</b></p>
+        <p>Saldo: <b id="saldoText">Rp 0</b></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Anggota</th>
+                    <th>Januari</th><th>Februari</th><th>Maret</th><th>April</th>
+                    <th>Mei</th><th>Juni</th><th>Juli</th><th>Agustus</th>
+                    <th>September</th><th>Oktober</th><th>November</th><th>Desember</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+
+        <!-- ADMIN -->
+        <div id="admin" class="admin hidden">
+            <h3>Input Dana Awal</h3>
+            <input type="number" id="inputDanaAwal" placeholder="Dana Awal (Rp)">
+            <button onclick="setDanaAwal()">Simpan</button>
+
+            <h3>Input Pembayaran</h3>
+            <select id="selectAnggota"></select>
+            <input type="number" id="inputBayar" placeholder="Jumlah (Rp)">
+            <button onclick="inputPembayaran()">Bayar</button>
+            <button onclick="hapusPembayaran()">Hapus Pembayaran Terakhir</button>
+
+            <h3>Pengeluaran</h3>
+            <input type="number" id="inputKeluar" placeholder="Jumlah (Rp)">
+            <button onclick="tambahPengeluaran()">Tambah</button>
+        </div>
+
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<script>
+const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+const PERIODE = 4;
+const BAYAR_PER_PERIODE = 10000;
+
+let anggota = JSON.parse(localStorage.getItem("anggota")) || ["Mas Kur","Mba Nurul","Eva","Mba Sri","Mba Salma","Nuki","Tatma"];
+let pembayaran = JSON.parse(localStorage.getItem("pembayaran")) || {};
+let danaAwal = Number(localStorage.getItem("danaAwal")) || 0;
+let pengeluaran = Number(localStorage.getItem("pengeluaran")) || 0;
+let role = null;
+
+anggota.forEach(a => {
+    if (!pembayaran[a]) pembayaran[a] = Array(12 * PERIODE).fill(false);
+});
+
+function login() {
+    const pw = password.value;
+    if (pw === "admin123") role = "admin";
+    else if (pw === "anggota123") role = "anggota";
+    else return document.getElementById("login-error").textContent = "Password salah";
+
+    document.getElementById("login").classList.add("hidden");
+    app.classList.remove("hidden");
+    document.getElementById("role-title").textContent = "Role: " + role;
+    if (role === "admin") admin.classList.remove("hidden");
+    render();
+}
+
+function render() {
+    let totalMasuk = 0;
+    anggota.forEach(a => pembayaran[a].forEach(p => p && (totalMasuk += BAYAR_PER_PERIODE)));
+    let saldo = danaAwal + totalMasuk - pengeluaran;
+
+    danaAwalText.textContent = `Rp ${danaAwal.toLocaleString()}`;
+    totalMasukText.textContent = `Rp ${totalMasuk.toLocaleString()}`;
+    totalKeluarText.textContent = `Rp ${pengeluaran.toLocaleString()}`;
+    saldoText.textContent = `Rp ${saldo.toLocaleString()}`;
+
+    document.getElementById("table-body").innerHTML = "";
+
+    // BARIS DANA AWAL
+    let trDana = `<tr class="bold"><td>Dana Awal</td>
+        <td colspan="12">Rp ${danaAwal.toLocaleString()}</td></tr>`;
+    document.getElementById("table-body").innerHTML += trDana;
+
+    anggota.forEach(a => {
+        let row = `<tr><td>${a}</td>`;
+        for (let i=0;i<12;i++){
+            let count = pembayaran[a].slice(i*PERIODE,(i+1)*PERIODE).filter(Boolean).length;
+            row += `<td>${count}/${PERIODE}</td>`;
+        }
+        row += "</tr>";
+        document.getElementById("table-body").innerHTML += row;
+    });
+
+    selectAnggota.innerHTML = anggota.map(a=>`<option>${a}</option>`).join("");
+}
+
+function setDanaAwal() {
+    danaAwal = Number(inputDanaAwal.value) || 0;
+    localStorage.setItem("danaAwal", danaAwal);
+    render();
+}
+
+function inputPembayaran() {
+    let nama = selectAnggota.value;
+    let jumlah = Number(inputBayar.value);
+    let periode = Math.floor(jumlah / BAYAR_PER_PERIODE);
+    let arr = pembayaran[nama];
+
+    for (let i=0;i<arr.length && periode>0;i++){
+        if (!arr[i]) { arr[i]=true; periode--; }
+    }
+
+    localStorage.setItem("pembayaran", JSON.stringify(pembayaran));
+    render();
+}
+
+function hapusPembayaran() {
+    if (role !== "admin") return;
+
+    let nama = selectAnggota.value;
+    let arr = pembayaran[nama];
+
+    // cari pembayaran terakhir
+    for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i]) {
+            arr[i] = false;
+            localStorage.setItem("pembayaran", JSON.stringify(pembayaran));
+            render();
+            return;
+        }
+    }
+
+    alert("Tidak ada pembayaran yang bisa dihapus");
+}
+
+
+function tambahPengeluaran() {
+    pengeluaran += Number(inputKeluar.value)||0;
+    localStorage.setItem("pengeluaran", pengeluaran);
+    render();
+}
+
+function logout() {
+    location.reload();
+}
+</script>
+
+</body>
+</html>
