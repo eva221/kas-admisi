@@ -97,11 +97,12 @@ async function loadData(){
  // =====================
  // SALDO AWAL
  // =====================
- const {data:config} = await supabase
- .from("config_kas")
- .select("*")
- .single()
-
+const {data:configList}=await supabase
+.from("config_kas")
+.select("*")
+ 
+const config = configList?.[0] || null
+ 
  let saldoAwalValue = config?.dana_awal || 0
 
 
@@ -153,7 +154,7 @@ window.setSaldoAwal = async ()=>{
   dana_awal: Number(inputSaldoAwal.value)
 })
 
-
+}
 window.tambahAnggota = async ()=>{
  await supabase
  .from("anggota")
