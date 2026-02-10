@@ -148,9 +148,10 @@ window.setSaldoAwal = async ()=>{
  if(role!=="admin") return alert("Admin only")
 
  await supabase
- .from("config_kas")
- .upsert({id:1,dana_awal:inputSaldoAwal.value})
-}
+.from("config_kas")
+.upsert({
+  dana_awal: Number(inputSaldoAwal.value)
+})
 
 
 window.tambahAnggota = async ()=>{
