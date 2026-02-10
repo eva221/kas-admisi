@@ -1,120 +1,51 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>Aplikasi Kas Web</title>
-
-<style>
-body { font-family: Arial; margin:20px; }
-.hidden{ display:none; }
-table{ width:100%; border-collapse:collapse; margin-top:20px; }
-th,td{ border:1px solid #ddd; padding:8px; text-align:center; }
-.admin{ background:#e7f3ff; padding:10px; margin-top:20px; }
-</style>
-</head>
-
-<body>
-
-<h2>Aplikasi Kas</h2>
-
-<input type="password" id="password">
-<button onclick="login()">Login</button>
-
-<div id="app" class="hidden">
-
-<p>Dana Awal: <b id="danaAwalText"></b></p>
-
-<table>
-<thead>
-<tr>
-<th>Bulan</th>
-<th>Mas Kur</th>
-<th>Mba Nurul</th>
-<th>Eva</th>
-<th>Mba Sri</th>
-<th>Mba Salma</th>
-<th>Nuki</th>
-<th>Tatma</th>
-<th>Total</th>
-</tr>
-</thead>
-
-<tbody id="table-body"></tbody>
-
-</table>
-
-<div id="admin" class="admin hidden">
-
-<select id="selectAnggota">
-<option>Mas Kur</option>
-<option>Mba Nurul</option>
-<option>Eva</option>
-<option>Mba Sri</option>
-<option>Mba Salma</option>
-<option>Nuki</option>
-<option>Tatma</option>
-</select>
-
-<select id="selectBulan">
-<option>Jan</option>
-<option>Feb</option>
-<option>Mar</option>
-<option>Apr</option>
-<option>Mei</option>
-<option>Jun</option>
-<option>Jul</option>
-<option>Agu</option>
-<option>Sep</option>
-<option>Okt</option>
-<option>Nov</option>
-<option>Des</option>
-</select>
-
-<input id="inputBayar" type="number">
-
-<button onclick="inputPembayaran()">Tambah</button>
-
-</div>
-
-</div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
 
 const SUPABASE_URL="https://tizsemvhdyykizevqsbl.supabase.co";
-const SUPABASE_KEY="ANON_PUBLIC_KEY";
+const SUPABASE_KEY="sb_publishable_ZzxxlCc_IGlHAaeo4OU7Jg_EL5Yhdeq";
 
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
 
-console.log(supabaseClient);
-
 const anggota=["Mas Kur","Mba Nurul","Eva","Mba Sri","Mba Salma","Nuki","Tatma"];
 
 const BULAN=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 
-let transaksi=JSON.parse(localStorage.getItem("transaksi"))||[];
+let transaksi=[];
 
-let role=null;
+const passwordInput=document.getElementById("password");
+const app=document.getElementById("app");
+const admin=document.getElementById("admin");
 
+async function login(){
 
-function login(){
-
-if(password.value==="admin123") role="admin";
-else role="anggota";
+let role=passwordInput.value==="admin123"?"admin":"anggota";
 
 app.classList.remove("hidden");
 
 if(role==="admin") admin.classList.remove("hidden");
 
-render();
+await loadData();
 
 }
 
+async function loadData(){
+
+const {data,error}=await supabaseClient
+  .from("transaksi_kas")
+  .select("*");
+
+if(error){
+ console.log(error);
+ return;
+}
+
+transaksi=data;
+
+render();
+
+}
 
 function render(){
 
@@ -127,27 +58,24 @@ let list=transaksi.filter(t=>t.bulan===bulan);
 if(list.length===0){
 
 html+=`<tr><td>${bulan}</td><td colspan="8">-</td></tr>`;
-
 return;
 
 }
 
-list.forEach((t,index)=>{
+let rowData={};
+
+list.forEach(t=>{
+ rowData[t.anggota]=t.jumlah;
+});
 
 let total=0;
 
 html+="<tr>";
-
-if(index===0){
-
-html+=`<td rowspan="${list.length}">${bulan}</td>`;
-
-}
+html+=`<td>${bulan}</td>`;
 
 anggota.forEach(a=>{
 
-let val=t.anggota[a]||"";
-
+let val=rowData[a]||"";
 total+=val||0;
 
 html+=`<td>${val?("Rp "+val.toLocaleString()):""}</td>`;
@@ -155,10 +83,7 @@ html+=`<td>${val?("Rp "+val.toLocaleString()):""}</td>`;
 });
 
 html+=`<td>Rp ${total.toLocaleString()}</td>`;
-
 html+="</tr>";
-
-});
 
 });
 
@@ -166,28 +91,24 @@ document.getElementById("table-body").innerHTML=html;
 
 }
 
+async function inputPembayaran(){
 
+let nama=document.getElementById("selectAnggota").value;
+let bulan=document.getElementById("selectBulan").value;
+let jumlah=Number(document.getElementById("inputBayar").value);
 
-function inputPembayaran(){
+await supabaseClient
+  .from("transaksi_kas")
+  .insert([
+    {
+      anggota:nama,
+      bulan:bulan,
+      jumlah:jumlah
+    }
+  ]);
 
-let nama=selectAnggota.value;
-let bulan=selectBulan.value;
-let jumlah=Number(inputBayar.value);
-
-transaksi.push({
-
-bulan:bulan,
-anggota:{[nama]:jumlah}
-
-});
-
-localStorage.setItem("transaksi",JSON.stringify(transaksi));
-
-render();
+await loadData();
 
 }
 
 </script>
-
-</body>
-</html>
