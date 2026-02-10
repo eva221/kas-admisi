@@ -1,114 +1,218 @@
-<script>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>KAS PRO REALTIME</title>
 
-const SUPABASE_URL="https://tizsemvhdyykizevqsbl.supabase.co";
-const SUPABASE_KEY="sb_publishable_ZzxxlCc_IGlHAaeo4OU7Jg_EL5Yhdeq";
+<style>
+body{font-family:Arial;margin:20px}
+.admin{background:#e7f3ff;padding:10px;margin-top:20px}
+.hidden{display:none}
+</style>
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+</head>
+<body>
 
-const anggota=["Mas Kur","Mba Nurul","Eva","Mba Sri","Mba Salma","Nuki","Tatma"];
+<h2>LOGIN</h2>
 
-const BULAN=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+<input type="password" id="password">
+<button onclick="login()">Login</button>
 
-let transaksi=[];
+<hr>
 
-const passwordInput=document.getElementById("password");
-const app=document.getElementById("app");
-const admin=document.getElementById("admin");
+<div id="app" class="hidden">
 
-async function login(){
+<h3>Saldo Awal: <span id="saldoAwal">0</span></h3>
+<h3>Total Masuk: <span id="totalMasuk">0</span></h3>
+<h3>Total Keluar: <span id="totalKeluar">0</span></h3>
 
-let role=passwordInput.value==="admin123"?"admin":"anggota";
+<h1>Sisa Kas: <span id="sisaKas">0</span></h1>
 
-app.classList.remove("hidden");
+<div id="adminPanel" class="admin hidden">
 
-if(role==="admin") admin.classList.remove("hidden");
+<h3>SET SALDO AWAL (ADMIN ONLY)</h3>
 
-await loadData();
+<input id="inputSaldoAwal" type="number">
+<button onclick="setSaldoAwal()">Simpan</button>
+
+<hr>
+
+<h3>Tambah Anggota</h3>
+
+<input id="inputNamaAnggota">
+<button onclick="tambahAnggota()">Tambah</button>
+
+<hr>
+
+<h3>Tambah Kas</h3>
+
+<select id="selectAnggota"></select>
+<input id="inputJumlahKas" type="number">
+<button onclick="tambahKas()">Tambah</button>
+
+<hr>
+
+<h3>Tambah Pengeluaran</h3>
+
+<input id="inputLokasi">
+<input id="inputJumlahKeluar" type="number">
+<button onclick="tambahPengeluaran()">Tambah</button>
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js"
+
+const supabase=createClient(
+"https://tizsemvhdyykizevqsbl.supabase.co",
+"sb_publishable_ZzxxlCc_IGlHAaeo4OU7Jg_EL5Yhdeq"
+)
+
+let role="anggota"
+
+
+window.login=()=>{
+
+if(password.value==="admin123") role="admin"
+
+app.classList.remove("hidden")
+
+if(role==="admin") adminPanel.classList.remove("hidden")
+
+loadData()
 
 }
+
 
 async function loadData(){
 
-const {data,error}=await supabaseClient
-  .from("transaksi_kas")
-  .select("*");
+// anggota
+const {data:anggota}=await supabase
+.from("anggota")
+.select("*")
 
-if(error){
- console.log(error);
- return;
-}
+selectAnggota.innerHTML=
+anggota.map(a=>`<option>${a.nama}</option>`).join("")
 
-transaksi=data;
 
-render();
+// saldo awal
+const {data:config}=await supabase
+.from("config_kas")
+.select("*")
+.single()
 
-}
+let saldoAwal=config?.dana_awal||0
 
-function render(){
 
-let html="";
+// pemasukan
+const {data:trx}=await supabase
+.from("transaksi_kas")
+.select("jumlah")
 
-BULAN.forEach(bulan=>{
+let totalMasuk=(trx||[])
+.reduce((sum,r)=>sum+Number(r.jumlah),0)
 
-let list=transaksi.filter(t=>t.bulan===bulan);
 
-if(list.length===0){
+// pengeluaran
+const {data:out}=await supabase
+.from("pengeluaran")
+.select("jumlah")
 
-html+=`<tr><td>${bulan}</td><td colspan="8">-</td></tr>`;
-return;
+let totalKeluar=(out||[])
+.reduce((sum,r)=>sum+Number(r.jumlah),0)
 
-}
 
-let rowData={};
+let sisaKas=saldoAwal+totalMasuk-totalKeluar
 
-list.forEach(t=>{
- rowData[t.anggota]=t.jumlah;
-});
 
-let total=0;
-
-html+="<tr>";
-html+=`<td>${bulan}</td>`;
-
-anggota.forEach(a=>{
-
-let val=rowData[a]||"";
-total+=val||0;
-
-html+=`<td>${val?("Rp "+val.toLocaleString()):""}</td>`;
-
-});
-
-html+=`<td>Rp ${total.toLocaleString()}</td>`;
-html+="</tr>";
-
-});
-
-document.getElementById("table-body").innerHTML=html;
+saldoAwal.innerText=saldoAwal
+totalMasuk.innerText=totalMasuk
+totalKeluar.innerText=totalKeluar
+sisaKas.innerText=sisaKas
 
 }
 
-async function inputPembayaran(){
 
-let nama=document.getElementById("selectAnggota").value;
-let bulan=document.getElementById("selectBulan").value;
-let jumlah=Number(document.getElementById("inputBayar").value);
+// =====================
+// ADMIN ACTION
+// =====================
 
-await supabaseClient
-  .from("transaksi_kas")
-  .insert([
-    {
-      anggota:nama,
-      bulan:bulan,
-      jumlah:jumlah
-    }
-  ]);
+window.setSaldoAwal=async()=>{
 
-await loadData();
+if(role!=="admin") return alert("Admin only")
+
+await supabase
+.from("config_kas")
+.upsert({id:1,dana_awal:inputSaldoAwal.value})
 
 }
+
+window.tambahAnggota=async()=>{
+
+await supabase
+.from("anggota")
+.insert({nama:inputNamaAnggota.value})
+
+}
+
+window.tambahKas=async()=>{
+
+await supabase
+.from("transaksi_kas")
+.insert({
+bulan:new Date().getMonth()+1,
+nama_anggota:selectAnggota.value,
+jumlah:inputJumlahKas.value
+})
+
+}
+
+window.tambahPengeluaran=async()=>{
+
+await supabase
+.from("pengeluaran")
+.insert({
+lokasi:inputLokasi.value,
+tanggal:new Date(),
+jumlah:inputJumlahKeluar.value
+})
+
+}
+
+
+// =====================
+// REALTIME AUTO SYNC
+// =====================
+
+supabase.channel("realtime-kas")
+
+.on("postgres_changes",
+{event:"*",schema:"public",table:"transaksi_kas"},
+()=>loadData()
+)
+
+.on("postgres_changes",
+{event:"*",schema:"public",table:"pengeluaran"},
+()=>loadData()
+)
+
+.on("postgres_changes",
+{event:"*",schema:"public",table:"config_kas"},
+()=>loadData()
+)
+
+.on("postgres_changes",
+{event:"*",schema:"public",table:"anggota"},
+()=>loadData()
+)
+
+.subscribe()
 
 </script>
+
+</body>
+</html>
