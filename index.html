@@ -86,13 +86,12 @@ th,td{ border:1px solid #ddd; padding:8px; text-align:center; }
 const SUPABASE_URL="https://tizsemvhdyykizevqsbl.supabase.co";
 const SUPABASE_KEY="ANON_PUBLIC_KEY";
 
-const supabase = window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_KEY
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
 );
 
-console.log("Supabase OK:",supabase);
-
+console.log(supabaseClient);
 
 const anggota=["Mas Kur","Mba Nurul","Eva","Mba Sri","Mba Salma","Nuki","Tatma"];
 
