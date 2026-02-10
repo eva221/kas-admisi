@@ -69,11 +69,21 @@
         <button onclick="logout()">Logout</button>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
 const PERIODE = 4;
 const BAYAR_PER_PERIODE = 10000;
+// ===== SUPABASE CONNECT =====
+
+const SUPABASE_URL = "https://tizsemvhdyykizevqsbl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ZzxxlCc_IGlHAaeo4OU7Jg_EL5Yhdeq";
+
+const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+console.log(supabase);
 
 let anggota = JSON.parse(localStorage.getItem("anggota")) || ["Mas Kur","Mba Nurul","Eva","Mba Sri","Mba Salma","Nuki","Tatma"];
 let pembayaran = JSON.parse(localStorage.getItem("pembayaran")) || {};
@@ -98,34 +108,46 @@ function login() {
     render();
 }
 
-function render() {
-    let totalMasuk = 0;
-    anggota.forEach(a => pembayaran[a].forEach(p => p && (totalMasuk += BAYAR_PER_PERIODE)));
-    let saldo = danaAwal + totalMasuk - pengeluaran;
+function render(){
 
-    danaAwalText.textContent = `Rp ${danaAwal.toLocaleString()}`;
-    totalMasukText.textContent = `Rp ${totalMasuk.toLocaleString()}`;
-    totalKeluarText.textContent = `Rp ${pengeluaran.toLocaleString()}`;
-    saldoText.textContent = `Rp ${saldo.toLocaleString()}`;
+    let html = "";
 
-    document.getElementById("table-body").innerHTML = "";
+    BULAN.forEach(bulan => {
 
-    // BARIS DANA AWAL
-    let trDana = `<tr class="bold"><td>Dana Awal</td>
-        <td colspan="12">Rp ${danaAwal.toLocaleString()}</td></tr>`;
-    document.getElementById("table-body").innerHTML += trDana;
+        // filter transaksi per bulan
+        let list = transaksi.filter(t => t.bulan === bulan);
 
-    anggota.forEach(a => {
-        let row = `<tr><td>${a}</td>`;
-        for (let i=0;i<12;i++){
-            let count = pembayaran[a].slice(i*PERIODE,(i+1)*PERIODE).filter(Boolean).length;
-            row += `<td>${count}/${PERIODE}</td>`;
+        if(list.length === 0){
+            html += `<tr>
+                <td>${bulan}</td>
+                <td colspan="${anggota.length+1}">-</td>
+            </tr>`;
         }
-        row += "</tr>";
-        document.getElementById("table-body").innerHTML += row;
+
+        list.forEach((t,index)=>{
+
+            let total = 0;
+
+            html += "<tr>";
+
+            // hanya tampil bulan di baris pertama
+            if(index===0){
+                html += `<td rowspan="${list.length}">${bulan}</td>`;
+            }
+
+            anggota.forEach(a=>{
+                let val = t.anggota[a] || "";
+                total += val || 0;
+                html += `<td>${val ? "Rp "+val.toLocaleString() : ""}</td>`;
+            });
+
+            html += `<td>Rp ${total.toLocaleString()}</td>`;
+            html += "</tr>";
+        });
+
     });
 
-    selectAnggota.innerHTML = anggota.map(a=>`<option>${a}</option>`).join("");
+    tableBody.innerHTML = html;
 }
 
 function setDanaAwal() {
@@ -134,17 +156,21 @@ function setDanaAwal() {
     render();
 }
 
-function inputPembayaran() {
+function inputPembayaran(){
+
     let nama = selectAnggota.value;
+    let bulan = selectBulan.value;
     let jumlah = Number(inputBayar.value);
-    let periode = Math.floor(jumlah / BAYAR_PER_PERIODE);
-    let arr = pembayaran[nama];
 
-    for (let i=0;i<arr.length && periode>0;i++){
-        if (!arr[i]) { arr[i]=true; periode--; }
-    }
+    transaksi.push({
+        bulan: bulan,
+        anggota: {
+            [nama]: jumlah
+        }
+    });
 
-    localStorage.setItem("pembayaran", JSON.stringify(pembayaran));
+    localStorage.setItem("transaksi", JSON.stringify(transaksi));
+
     render();
 }
 
