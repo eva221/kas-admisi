@@ -259,6 +259,7 @@ const formatRupiah=(n)=>new Intl.NumberFormat('id-ID',{style:'currency',currency
 document.getElementById("inputTanggalKas").valueAsDate=new Date()
 document.getElementById("inputTanggalKeluar").valueAsDate=new Date()
 
+
 window.login=()=>{
 
 const pass=document.getElementById("password").value
@@ -288,14 +289,14 @@ const {data:config}=await supabase.from("config_kas").select("*")
 
 const saldoAwal=config?.[0]?.dana_awal||0
 
-let transaksi=trx
+let transaksi=trx||[]
 
 if(bulanFilter){
-transaksi=trx.filter(t=>t.bulan===bulanFilter)
+transaksi=transaksi.filter(t=>t.bulan===bulanFilter)
 }
 
-const totalMasuk=transaksi.reduce((s,r)=>s+Number(r.jumlah),0)
-const totalKeluar=(keluar||[]).reduce((s,r)=>s+Number(r.jumlah),0)
+const totalMasuk=transaksi.reduce((s,r)=>s+Number(r.jumlah||0),0)
+const totalKeluar=(keluar||[]).reduce((s,r)=>s+Number(r.jumlah||0),0)
 
 const sisa=saldoAwal+totalMasuk-totalKeluar
 
@@ -307,7 +308,8 @@ document.getElementById("sisaKas").innerText=formatRupiah(sisa)
 
 const select=document.getElementById("selectAnggota")
 select.innerHTML=""
-anggota.forEach(a=>{
+
+anggota?.forEach(a=>{
 select.innerHTML+=`<option value="${a.nama}">${a.nama}</option>`
 })
 
@@ -315,7 +317,7 @@ select.innerHTML+=`<option value="${a.nama}">${a.nama}</option>`
 const list=document.getElementById("listAnggota")
 list.innerHTML=""
 
-anggota.forEach(a=>{
+anggota?.forEach(a=>{
 
 const bayar=transaksi.filter(t=>t.nama_anggota===a.nama)
 
@@ -323,20 +325,16 @@ bayar.forEach(t=>{
 
 list.innerHTML+=`
 <div class="anggota-item">
-
 <span>${a.nama}</span>
 <span>${t.bulan}</span>
 <span>${formatRupiah(t.jumlah)}</span>
-
 <button onclick="hapusKas('${t.id}')">Hapus</button>
-
 </div>
 `
 
 })
 
 })
-
 
 renderChart(totalMasuk,totalKeluar)
 
@@ -366,11 +364,16 @@ window.tambahAnggota=async()=>{
 
 const nama=document.getElementById("inputNamaAnggota").value
 
-await supabase.from("anggota").insert({nama})
+const {error}=await supabase.from("anggota").insert({nama})
+
+if(error){alert(error.message)}
+
+document.getElementById("inputNamaAnggota").value=""
 
 loadData()
 
 }
+
 
 
 window.tambahKas=async()=>{
@@ -381,15 +384,20 @@ const tanggal=document.getElementById("inputTanggalKas").value
 
 const bulan=new Date(tanggal).toLocaleString("id-ID",{month:"long"})
 
-await supabase.from("transaksi_kas").insert({
+const {error}=await supabase.from("transaksi_kas").insert({
 nama_anggota:nama,
 jumlah:jumlah,
 bulan:bulan
 })
 
+if(error){alert(error.message)}
+
+document.getElementById("inputJumlahKas").value=""
+
 loadData()
 
 }
+
 
 
 window.tambahPengeluaran=async()=>{
@@ -398,45 +406,68 @@ const lokasi=document.getElementById("inputLokasi").value
 const jumlah=document.getElementById("inputJumlahKeluar").value
 const tanggal=document.getElementById("inputTanggalKeluar").value
 
-await supabase.from("pengeluaran").insert({
+const {error}=await supabase.from("pengeluaran").insert({
 lokasi:lokasi,
 jumlah:jumlah,
 tanggal:tanggal
 })
 
+if(error){alert(error.message)}
+
+document.getElementById("inputLokasi").value=""
+document.getElementById("inputJumlahKeluar").value=""
+
 loadData()
 
 }
+
 
 
 window.setSaldoAwal=async()=>{
 
 const jumlah=document.getElementById("inputSaldoAwal").value
 
-await supabase.from("config_kas").upsert({
-id:1,
+await supabase.from("config_kas").delete().neq("dana_awal",null)
+
+const {error}=await supabase.from("config_kas").insert({
 dana_awal:jumlah
 })
+
+if(error){alert(error.message)}
 
 loadData()
 
 }
+
 
 
 window.hapusSaldoAwal=async()=>{
 
-await supabase.from("config_kas").delete().eq("id",1)
+if(!confirm("Hapus saldo awal?")) return
+
+const {error}=await supabase
+.from("config_kas")
+.delete()
+.neq("dana_awal",null)
+
+if(error){alert(error.message)}
 
 loadData()
 
 }
+
 
 
 window.hapusKas=async(id)=>{
 
 if(!confirm("hapus transaksi?")) return
 
-await supabase.from("transaksi_kas").delete().eq("id",id)
+const {error}=await supabase
+.from("transaksi_kas")
+.delete()
+.eq("id",id)
+
+if(error){alert(error.message)}
 
 loadData()
 
