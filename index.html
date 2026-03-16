@@ -132,27 +132,46 @@ body {
     margin-bottom: 20px;
 }
 
-.form-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 15px;
+    align-items: end;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e1f5fe;
 }
 
-.form-group input, .form-group select {
+.form-row.pemasukan {border-color: #bbdefb;}
+.form-row.pengeluaran {border-color: #ffcdd2;}
+.form-row.saldo-awal {border-color: #c8e6c9;}
+.form-row.anggota {border-color: #f3e5f5;}
+
+.form-row label {
+    font-weight: bold;
+    color: #1976D2;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-row input, .form-row select {
     padding: 12px;
     border: 2px solid #ddd;
     border-radius: 8px;
     font-size: 16px;
-    min-width: 200px;
 }
 
 .hidden {display: none !important;}
 
 @media (max-width: 768px) {
-    .form-group {flex-direction: column; align-items: stretch;}
-    .form-group input, .form-group select {min-width: auto;}
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
     .password-input {width: 100%; margin-bottom: 15px;}
 }
 </style>
@@ -193,29 +212,41 @@ body {
         <div id="adminPanel" class="admin-panel hidden">
             <h3>⚙️ PANEL ADMIN</h3>
             
-            <div class="form-group">
-                <h4>Set Saldo Awal</h4>
-                <input id="inputSaldoAwal" type="number" placeholder="Masukkan saldo awal">
+            <!-- Form Saldo Awal -->
+            <div class="form-row saldo-awal">
+                <label>💰 Saldo Awal</label>
+                <input id="inputSaldoAwal" type="number" placeholder="0">
+                <div></div>
                 <button class="btn btn-primary" onclick="setSaldoAwal()">💾 Simpan</button>
             </div>
 
-            <div class="form-group">
-                <h4>Tambah Anggota</h4>
-                <input id="inputNamaAnggota" placeholder="Nama anggota">
+            <!-- Form Tambah Anggota -->
+            <div class="form-row anggota">
+                <label>👥 Nama Anggota</label>
+                <input id="inputNamaAnggota" placeholder="John Doe">
+                <div></div>
                 <button class="btn btn-primary" onclick="tambahAnggota()">➕ Tambah</button>
             </div>
 
-            <div class="form-group">
-                <h4>Tambah Pemasukan</h4>
+            <!-- Form Pemasukan - 3 Kolom: Nama, Nominal, Tanggal -->
+            <div class="form-row pemasukan">
+                <label>👤 Nama</label>
+                <label>💰 Nominal</label>
+                <label>📅 Tanggal</label>
                 <select id="selectAnggota"></select>
-                <input id="inputJumlahKas" type="number" placeholder="Jumlah">
-                <button class="btn btn-primary" onclick="tambahKas()">💰 Tambah Kas</button>
+                <input id="inputJumlahKas" type="number" placeholder="Rp 50.000">
+                <input id="inputTanggalKas" type="date">
+                <button class="btn btn-primary" onclick="tambahKas()">💰 Pemasukan</button>
             </div>
 
-            <div class="form-group">
-                <h4>Tambah Pengeluaran</h4>
-                <input id="inputLokasi" placeholder="Lokasi/Keterangan">
-                <input id="inputJumlahKeluar" type="number" placeholder="Jumlah">
+            <!-- Form Pengeluaran -->
+            <div class="form-row pengeluaran">
+                <label>📍 Keterangan</label>
+                <label>💸 Nominal</label>
+                <label>📅 Tanggal</label>
+                <input id="inputLokasi" placeholder="Belanja bulanan">
+                <input id="inputJumlahKeluar" type="number" placeholder="Rp 25.000">
+                <input id="inputTanggalKeluar" type="date">
                 <button class="btn btn-primary" onclick="tambahPengeluaran()">💸 Pengeluaran</button>
             </div>
         </div>
@@ -244,6 +275,10 @@ const formatRupiah = (angka) => {
         minimumFractionDigits: 0
     }).format(angka)
 }
+
+// Set tanggal hari ini sebagai default
+document.getElementById('inputTanggalKas').valueAsDate = new Date()
+document.getElementById('inputTanggalKeluar').valueAsDate = new Date()
 
 window.login = () => {
     if (password.value === "admin123") {
@@ -332,21 +367,25 @@ window.tambahAnggota = async () => {
 window.tambahKas = async () => {
     const nama = document.getElementById('selectAnggota').value
     const jumlah = Number(document.getElementById('inputJumlahKas').value)
+    const tanggal = document.getElementById('inputTanggalKas').value
     
-    if (!nama || !jumlah || jumlah <= 0) {
-        return alert("⚠️ Pilih anggota dan masukkan jumlah yang valid!")
-    }
+    if (!nama) return alert("⚠️ Pilih nama anggota!")
+    if (!jumlah || jumlah <= 0) return alert("⚠️ Masukkan nominal yang valid!")
+    if (!tanggal) return alert("⚠️ Pilih tanggal!")
 
     try {
         await supabase.from("transaksi_kas").insert({
-            bulan: new Date().getMonth() + 1,
-            tahun: new Date().getFullYear(),
             nama_anggota: nama,
             jumlah: jumlah,
-            tanggal: new Date().toISOString()
+            tanggal: tanggal,
+            bulan: new Date(tanggal).getMonth() + 1,
+            tahun: new Date(tanggal).getFullYear()
         })
-        alert("✅ Pemasukan ditambahkan!")
+        alert(`✅ Pemasukan Rp ${formatRupiah(jumlah)} dari ${nama} (${tanggal}) berhasil ditambahkan!`)
+        
+        // Reset form
         document.getElementById('inputJumlahKas').value = ''
+        document.getElementById('inputTanggalKas').valueAsDate = new Date()
         loadData()
     } catch (error) {
         alert("❌ Error: " + error.message)
@@ -356,20 +395,24 @@ window.tambahKas = async () => {
 window.tambahPengeluaran = async () => {
     const lokasi = document.getElementById('inputLokasi').value.trim()
     const jumlah = Number(document.getElementById('inputJumlahKeluar').value)
+    const tanggal = document.getElementById('inputTanggalKeluar').value
     
-    if (!lokasi || !jumlah || jumlah <= 0) {
-        return alert("⚠️ Isi keterangan dan jumlah yang valid!")
-    }
+    if (!lokasi) return alert("⚠️ Isi keterangan pengeluaran!")
+    if (!jumlah || jumlah <= 0) return alert("⚠️ Masukkan jumlah yang valid!")
+    if (!tanggal) return alert("⚠️ Pilih tanggal!")
 
     try {
         await supabase.from("pengeluaran").insert({
             lokasi: lokasi,
-            tanggal: new Date().toISOString(),
-            jumlah: jumlah
+            jumlah: jumlah,
+            tanggal: tanggal
         })
-        alert("✅ Pengeluaran ditambahkan!")
+        alert(`✅ Pengeluaran Rp ${formatRupiah(jumlah)} (${lokasi}) (${tanggal}) berhasil ditambahkan!`)
+        
+        // Reset form
         document.getElementById('inputLokasi').value = ''
         document.getElementById('inputJumlahKeluar').value = ''
+        document.getElementById('inputTanggalKeluar').valueAsDate = new Date()
         loadData()
     } catch (error) {
         alert("❌ Error: " + error.message)
