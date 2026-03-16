@@ -1,189 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KAS PRO REALTIME</title>
-
-<style>
-body{
-font-family:Arial;
-background:#667eea;
-padding:20px;
-}
-
-.container{
-max-width:1100px;
-margin:auto;
-background:white;
-border-radius:10px;
-padding:30px;
-}
-
-.hidden{
-display:none;
-}
-
-.dashboard{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:20px;
-margin-bottom:30px;
-}
-
-.card{
-background:#f3f3f3;
-padding:20px;
-border-radius:10px;
-text-align:center;
-}
-
-.value{
-font-size:28px;
-font-weight:bold;
-}
-
-.form-row{
-display:grid;
-grid-template-columns:1fr 1fr 1fr auto;
-gap:10px;
-margin-bottom:15px;
-}
-
-input,select{
-padding:10px;
-}
-
-button{
-padding:10px 15px;
-cursor:pointer;
-}
-
-.anggota-list{
-margin-top:20px;
-padding:15px;
-background:#f7f7f7;
-border-radius:10px;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<div id="loginSection">
-
-<h2>Login Kas</h2>
-
-<input id="password" type="password" placeholder="Password">
-
-<button onclick="login()">Login</button>
-
-<div id="loginError" style="color:red"></div>
-
-</div>
-
-
-<div id="app" class="hidden">
-
-<h2>Dashboard Kas</h2>
-
-<div class="dashboard">
-
-<div class="card">
-Saldo Awal
-<div id="saldoAwal" class="value">Rp 0</div>
-</div>
-
-<div class="card">
-Total Masuk
-<div id="totalMasuk" class="value">Rp 0</div>
-</div>
-
-<div class="card">
-Total Keluar
-<div id="totalKeluar" class="value">Rp 0</div>
-</div>
-
-<div class="card">
-Sisa Kas
-<div id="sisaKas" class="value">Rp 0</div>
-</div>
-
-</div>
-
-
-<div id="adminPanel" class="hidden">
-
-<h3>Set Saldo Awal</h3>
-
-<div class="form-row">
-<input id="inputSaldoAwal" type="number" placeholder="Saldo awal">
-<div></div>
-<div></div>
-<button onclick="setSaldoAwal()">Simpan</button>
-</div>
-
-
-<h3>Tambah Anggota</h3>
-
-<div class="form-row">
-<input id="inputNamaAnggota" placeholder="Nama anggota">
-<div></div>
-<div></div>
-<button onclick="tambahAnggota()">Tambah</button>
-</div>
-
-
-<h3>Pemasukan Kas</h3>
-
-<div class="form-row">
-
-<select id="selectAnggota"></select>
-
-<input id="inputJumlahKas" type="number" placeholder="Jumlah">
-
-<input id="inputTanggalKas" type="date">
-
-<button onclick="tambahKas()">Tambah</button>
-
-</div>
-
-
-<h3>Pengeluaran</h3>
-
-<div class="form-row">
-
-<input id="inputLokasi" placeholder="Keterangan">
-
-<input id="inputJumlahKeluar" type="number">
-
-<input id="inputTanggalKeluar" type="date">
-
-<button onclick="tambahPengeluaran()">Tambah</button>
-
-</div>
-
-</div>
-
-
-<div class="anggota-list">
-
-<h3>Daftar Anggota</h3>
-
-<ul id="listAnggota"></ul>
-
-</div>
-
-
-</div>
-
-</div>
-
-
-
 <script type="module">
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
@@ -195,23 +9,18 @@ const supabase = createClient(
 
 let role="anggota"
 
-
 const formatRupiah=(n)=>new Intl.NumberFormat('id-ID',{
 style:'currency',
 currency:'IDR',
 minimumFractionDigits:0
 }).format(n)
 
-
-
 document.getElementById('inputTanggalKas').valueAsDate=new Date()
 document.getElementById('inputTanggalKeluar').valueAsDate=new Date()
 
-
-
 window.login=async()=>{
 
-const pass=document.getElementById("password").value
+const pass=document.getElementById('password').value
 
 if(pass==="admin123"){
 role="admin"
@@ -221,7 +30,6 @@ return
 }
 
 document.getElementById("loginSection").style.display="none"
-
 document.getElementById("app").classList.remove("hidden")
 
 if(role==="admin"){
@@ -232,11 +40,9 @@ loadData()
 
 }
 
-
-
 async function loadData(){
 
-// ambil anggota
+// anggota
 const {data:anggota}=await supabase
 .from("anggota")
 .select("*")
@@ -249,11 +55,8 @@ select.innerHTML=""
 list.innerHTML=""
 
 anggota?.forEach(a=>{
-
 select.innerHTML+=`<option value="${a.nama}">${a.nama}</option>`
-
 list.innerHTML+=`<li>${a.nama}</li>`
-
 })
 
 
@@ -265,26 +68,71 @@ const {data:config}=await supabase
 const saldoAwal=config?.[0]?.dana_awal||0
 
 
-// total masuk
+// transaksi kas
 const {data:trx}=await supabase
 .from("transaksi_kas")
-.select("jumlah")
+.select("*")
 
 const totalMasuk=(trx||[])
 .reduce((sum,r)=>sum+Number(r.jumlah||0),0)
 
+const tableKas=document.querySelector("#tableKas tbody")
 
-// total keluar
+if(tableKas){
+
+tableKas.innerHTML=""
+
+trx?.forEach(t=>{
+
+tableKas.innerHTML+=`
+<tr>
+<td>${t.nama_anggota}</td>
+<td>${t.bulan}</td>
+<td>${formatRupiah(t.jumlah)}</td>
+<td>
+<button onclick="hapusKas('${t.id}')">Hapus</button>
+</td>
+</tr>
+`
+
+})
+
+}
+
+
+// pengeluaran
 const {data:keluar}=await supabase
 .from("pengeluaran")
-.select("jumlah")
+.select("*")
 
 const totalKeluar=(keluar||[])
 .reduce((sum,r)=>sum+Number(r.jumlah||0),0)
 
+const tableKeluar=document.querySelector("#tableKeluar tbody")
+
+if(tableKeluar){
+
+tableKeluar.innerHTML=""
+
+keluar?.forEach(k=>{
+
+tableKeluar.innerHTML+=`
+<tr>
+<td>${k.lokasi}</td>
+<td>${k.tanggal}</td>
+<td>${formatRupiah(k.jumlah)}</td>
+<td>
+<button onclick="hapusKeluar('${k.id}')">Hapus</button>
+</td>
+</tr>
+`
+
+})
+
+}
+
 
 const sisa=saldoAwal+totalMasuk-totalKeluar
-
 
 document.getElementById("saldoAwal").innerText=formatRupiah(saldoAwal)
 document.getElementById("totalMasuk").innerText=formatRupiah(totalMasuk)
@@ -294,20 +142,12 @@ document.getElementById("sisaKas").innerText=formatRupiah(sisa)
 }
 
 
-
-
+// tambah anggota
 window.tambahAnggota=async()=>{
 
 const nama=document.getElementById("inputNamaAnggota").value
 
-const {error}=await supabase
-.from("anggota")
-.insert({nama})
-
-if(error){
-alert(error.message)
-return
-}
+await supabase.from("anggota").insert({nama})
 
 document.getElementById("inputNamaAnggota").value=""
 
@@ -316,31 +156,20 @@ loadData()
 }
 
 
-
+// tambah kas
 window.tambahKas=async()=>{
 
 const nama=document.getElementById("selectAnggota").value
-
 const jumlah=Number(document.getElementById("inputJumlahKas").value)
-
 const tanggal=document.getElementById("inputTanggalKas").value
 
-const bulan=new Date(tanggal)
-.toLocaleString('id-ID',{month:'long'})
+const bulan=new Date(tanggal).toLocaleString('id-ID',{month:'long'})
 
-
-const {error}=await supabase
-.from("transaksi_kas")
-.insert({
+await supabase.from("transaksi_kas").insert({
 nama_anggota:nama,
 jumlah:jumlah,
 bulan:bulan
 })
-
-if(error){
-alert(error.message)
-return
-}
 
 document.getElementById("inputJumlahKas").value=""
 
@@ -349,28 +178,18 @@ loadData()
 }
 
 
-
+// tambah pengeluaran
 window.tambahPengeluaran=async()=>{
 
 const lokasi=document.getElementById("inputLokasi").value
-
 const jumlah=Number(document.getElementById("inputJumlahKeluar").value)
-
 const tanggal=document.getElementById("inputTanggalKeluar").value
 
-
-const {error}=await supabase
-.from("pengeluaran")
-.insert({
+await supabase.from("pengeluaran").insert({
 lokasi:lokasi,
 jumlah:jumlah,
 tanggal:tanggal
 })
-
-if(error){
-alert(error.message)
-return
-}
 
 document.getElementById("inputLokasi").value=""
 document.getElementById("inputJumlahKeluar").value=""
@@ -380,27 +199,49 @@ loadData()
 }
 
 
-
+// saldo awal
 window.setSaldoAwal=async()=>{
 
 const jumlah=Number(document.getElementById("inputSaldoAwal").value)
 
-const {error}=await supabase
-.from("config_kas")
-.upsert({dana_awal:jumlah})
-
-if(error){
-alert(error.message)
-return
-}
+await supabase.from("config_kas").upsert({dana_awal:jumlah})
 
 loadData()
 
 }
 
 
+// hapus kas
+window.hapusKas=async(id)=>{
 
-// realtime update
+if(!confirm("Hapus transaksi?")) return
+
+await supabase
+.from("transaksi_kas")
+.delete()
+.eq("id",id)
+
+loadData()
+
+}
+
+
+// hapus pengeluaran
+window.hapusKeluar=async(id)=>{
+
+if(!confirm("Hapus pengeluaran?")) return
+
+await supabase
+.from("pengeluaran")
+.delete()
+.eq("id",id)
+
+loadData()
+
+}
+
+
+// realtime
 supabase
 .channel("realtime-kas")
 
@@ -414,8 +255,4 @@ supabase
 
 .subscribe()
 
-
 </script>
-
-</body>
-</html>
