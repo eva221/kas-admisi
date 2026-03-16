@@ -173,8 +173,17 @@ padding:10px;
 <h3>Set Saldo Awal</h3>
 
 <div class="form-row">
-<input type="number" id="inputSaldoAwal" placeholder="Saldo awal">
+
+<input
+type="number"
+id="inputSaldoAwal"
+placeholder="Saldo awal"
+/>
+
 <button onclick="setSaldoAwal()">Simpan</button>
+
+<button onclick="hapusSaldoAwal()">Hapus</button>
+
 </div>
 
 </div>
@@ -475,6 +484,22 @@ loadData()
 
 }
 
+window.hapusSaldoAwal = async () => {
+
+if(!confirm("Hapus saldo awal?")) return
+
+const { error } = await supabase
+.from("config_kas")
+.delete()
+.neq("id", "")
+
+if(error){
+alert(error.message)
+}else{
+loadData()
+}
+
+}
 
 
 supabase
