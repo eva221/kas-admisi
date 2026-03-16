@@ -22,12 +22,17 @@ body {
     border-radius: 20px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     overflow: hidden;
+    min-height: 80vh;
 }
 
 .login-section {
-    padding: 40px;
+    padding: 60px 40px;
     text-align: center;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .login-section h2 {
@@ -37,22 +42,25 @@ body {
 }
 
 .password-input {
-    width: 300px;
+    width: 100%;
+    max-width: 300px;
     padding: 15px;
     font-size: 18px;
     border: 2px solid #ddd;
     border-radius: 10px;
     margin-right: 10px;
+    margin-bottom: 20px;
 }
 
 .btn {
-    padding: 15px 30px;
+    padding: 15px 40px;
     font-size: 16px;
     border: none;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s;
     font-weight: bold;
+    min-width: 120px;
 }
 
 .btn-primary {
@@ -60,14 +68,14 @@ body {
     color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
 }
 
 .app-section {
     padding: 40px;
-    display: none;
+    /* Hilangkan display: none, gunakan visibility */
 }
 
 .dashboard {
@@ -156,6 +164,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 14px;
 }
 
 .form-row input, .form-row select {
@@ -165,7 +174,19 @@ body {
     font-size: 16px;
 }
 
-.hidden {display: none !important;}
+.hidden {
+    display: none !important;
+}
+
+#app.hidden {
+    display: none !important;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
 
 @media (max-width: 768px) {
     .form-row {
@@ -173,24 +194,34 @@ body {
         gap: 10px;
     }
     .password-input {width: 100%; margin-bottom: 15px;}
+    body {padding: 10px;}
 }
 </style>
 </head>
 
 <body>
 <div class="container">
-    <div class="login-section" id="loginSection">
+    <!-- Login Section - SELALU TERLIHAT PERTAMA -->
+    <div id="loginSection" class="login-section">
         <h2>🔐 LOGIN KAS PRO</h2>
-        <div style="display: flex; justify-content: center; flex-wrap: wrap;">
-            <input type="password" id="password" class="password-input" placeholder="Masukkan password...">
-            <button class="btn btn-primary" onclick="login()">Login</button>
+        <p style="color: #666; margin-bottom: 30px;">Masukkan password untuk mengakses dashboard</p>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <input type="password" id="password" class="password-input" placeholder="Masukkan password admin...">
+            <button id="loginBtn" class="btn btn-primary" onclick="login()">🚀 Masuk</button>
+            <div id="loginError" style="color: #f44336; font-weight: bold; display: none;"></div>
         </div>
     </div>
 
+    <!-- App Section - AWALNYA DIHIDDEN -->
     <div id="app" class="app-section hidden">
-        <h1 style="text-align: center; color: #333; margin-bottom: 40px;">📊 DASHBOARD KAS</h1>
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1>📊 DASHBOARD KAS</h1>
+            <div id="loading" class="loading" style="display: none;">
+                🔄 Memuat data...
+            </div>
+        </div>
         
-        <div class="dashboard">
+        <div class="dashboard" id="dashboard" style="display: none;">
             <div class="card saldo-awal">
                 <h3>💰 Saldo Awal</h3>
                 <div class="value" id="saldoAwal">Rp 0</div>
@@ -212,7 +243,6 @@ body {
         <div id="adminPanel" class="admin-panel hidden">
             <h3>⚙️ PANEL ADMIN</h3>
             
-            <!-- Form Saldo Awal -->
             <div class="form-row saldo-awal">
                 <label>💰 Saldo Awal</label>
                 <input id="inputSaldoAwal" type="number" placeholder="0">
@@ -220,7 +250,6 @@ body {
                 <button class="btn btn-primary" onclick="setSaldoAwal()">💾 Simpan</button>
             </div>
 
-            <!-- Form Tambah Anggota -->
             <div class="form-row anggota">
                 <label>👥 Nama Anggota</label>
                 <input id="inputNamaAnggota" placeholder="John Doe">
@@ -228,24 +257,22 @@ body {
                 <button class="btn btn-primary" onclick="tambahAnggota()">➕ Tambah</button>
             </div>
 
-            <!-- Form Pemasukan - 3 Kolom: Nama, Nominal, Tanggal -->
             <div class="form-row pemasukan">
                 <label>👤 Nama</label>
                 <label>💰 Nominal</label>
                 <label>📅 Tanggal</label>
                 <select id="selectAnggota"></select>
-                <input id="inputJumlahKas" type="number" placeholder="Rp 50.000">
+                <input id="inputJumlahKas" type="number" placeholder="50000">
                 <input id="inputTanggalKas" type="date">
                 <button class="btn btn-primary" onclick="tambahKas()">💰 Pemasukan</button>
             </div>
 
-            <!-- Form Pengeluaran -->
             <div class="form-row pengeluaran">
                 <label>📍 Keterangan</label>
                 <label>💸 Nominal</label>
                 <label>📅 Tanggal</label>
                 <input id="inputLokasi" placeholder="Belanja bulanan">
-                <input id="inputJumlahKeluar" type="number" placeholder="Rp 25.000">
+                <input id="inputJumlahKeluar" type="number" placeholder="25000">
                 <input id="inputTanggalKeluar" type="date">
                 <button class="btn btn-primary" onclick="tambahPengeluaran()">💸 Pengeluaran</button>
             </div>
@@ -262,10 +289,16 @@ const supabase = createClient(
 )
 
 let role = "anggota"
+
+// Elements
 const loginSection = document.getElementById('loginSection')
 const app = document.getElementById('app')
 const adminPanel = document.getElementById('adminPanel')
 const password = document.getElementById('password')
+const loginBtn = document.getElementById('loginBtn')
+const loginError = document.getElementById('loginError')
+const dashboard = document.getElementById('dashboard')
+const loading = document.getElementById('loading')
 
 // Format Rupiah
 const formatRupiah = (angka) => {
@@ -276,35 +309,72 @@ const formatRupiah = (angka) => {
     }).format(angka)
 }
 
-// Set tanggal hari ini sebagai default
+// Set tanggal hari ini
 document.getElementById('inputTanggalKas').valueAsDate = new Date()
 document.getElementById('inputTanggalKeluar').valueAsDate = new Date()
 
-window.login = () => {
-    if (password.value === "admin123") {
-        role = "admin"
-    } else if (!password.value) {
-        return alert("⚠️ Password harus diisi!")
+window.login = async () => {
+    const pass = password.value.trim()
+    loginError.style.display = 'none'
+    loginBtn.disabled = true
+    loginBtn.textContent = '🔄 Memeriksa...'
+
+    try {
+        if (pass === "admin123") {
+            role = "admin"
+        } else if (!pass) {
+            throw new Error("Password harus diisi!")
+        } else {
+            throw new Error("Password salah!")
+        }
+
+        // Sembunyikan login, tampilkan app
+        loginSection.style.display = 'none'
+        app.classList.remove('hidden')
+        
+        // Loading
+        loading.style.display = 'block'
+        dashboard.style.display = 'none'
+
+        // Load data
+        await loadData()
+        
+        // Show dashboard
+        loading.style.display = 'none'
+        dashboard.style.display = 'grid'
+
+        if (role === "admin") {
+            adminPanel.classList.remove('hidden')
+        }
+
+        password.value = ''
+        
+    } catch (error) {
+        loginError.textContent = `❌ ${error.message}`
+        loginError.style.display = 'block'
+    } finally {
+        loginBtn.disabled = false
+        loginBtn.textContent = '🚀 Masuk'
     }
-
-    loginSection.classList.add('hidden')
-    app.classList.remove('hidden')
-
-    if (role === "admin") {
-        adminPanel.classList.remove('hidden')
-    }
-
-    loadData()
-    password.value = ''
 }
+
+// Enter key support
+password.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') login()
+})
 
 // Load data utama
 async function loadData() {
     try {
         // Anggota
         const { data: anggota } = await supabase.from("anggota").select("*")
-        document.getElementById('selectAnggota').innerHTML = 
+        const selectAnggota = document.getElementById('selectAnggota')
+        selectAnggota.innerHTML = 
             (anggota || []).map(a => `<option value="${a.nama}">${a.nama}</option>`).join("")
+        
+        if (!anggota?.length) {
+            selectAnggota.innerHTML = '<option value="">Tidak ada anggota, tambah dulu!</option>'
+        }
 
         // Config saldo awal
         const { data: configList } = await supabase.from("config_kas").select("*")
@@ -313,11 +383,11 @@ async function loadData() {
 
         // Total pemasukan
         const { data: trx } = await supabase.from("transaksi_kas").select("jumlah")
-        const totalMasukValue = (trx || []).reduce((sum, r) => sum + Number(r.jumlah), 0)
+        const totalMasukValue = (trx || []).reduce((sum, r) => sum + Number(r.jumlah || 0), 0)
 
         // Total pengeluaran
         const { data: pengeluaran } = await supabase.from("pengeluaran").select("jumlah")
-        const totalKeluarValue = (pengeluaran || []).reduce((sum, r) => sum + Number(r.jumlah), 0)
+        const totalKeluarValue = (pengeluaran || []).reduce((sum, r) => sum + Number(r.jumlah || 0), 0)
 
         const sisaKasValue = saldoAwalValue + totalMasukValue - totalKeluarValue
 
@@ -333,7 +403,7 @@ async function loadData() {
     }
 }
 
-// Admin Actions
+// Admin Actions - sama seperti sebelumnya
 window.setSaldoAwal = async () => {
     if (role !== "admin") return alert("❌ Admin only!")
     
@@ -381,9 +451,8 @@ window.tambahKas = async () => {
             bulan: new Date(tanggal).getMonth() + 1,
             tahun: new Date(tanggal).getFullYear()
         })
-        alert(`✅ Pemasukan Rp ${formatRupiah(jumlah)} dari ${nama} (${tanggal}) berhasil ditambahkan!`)
+        alert(`✅ Pemasukan Rp ${formatRupiah(jumlah)} dari ${nama} (${tanggal}) berhasil!`)
         
-        // Reset form
         document.getElementById('inputJumlahKas').value = ''
         document.getElementById('inputTanggalKas').valueAsDate = new Date()
         loadData()
@@ -407,9 +476,8 @@ window.tambahPengeluaran = async () => {
             jumlah: jumlah,
             tanggal: tanggal
         })
-        alert(`✅ Pengeluaran Rp ${formatRupiah(jumlah)} (${lokasi}) (${tanggal}) berhasil ditambahkan!`)
+        alert(`✅ Pengeluaran Rp ${formatRupiah(jumlah)} (${lokasi}) (${tanggal}) berhasil!`)
         
-        // Reset form
         document.getElementById('inputLokasi').value = ''
         document.getElementById('inputJumlahKeluar').value = ''
         document.getElementById('inputTanggalKeluar').valueAsDate = new Date()
@@ -419,22 +487,7 @@ window.tambahPengeluaran = async () => {
     }
 }
 
-// Realtime subscription
+// Realtime
 supabase.channel("realtime-kas")
     .on("postgres_changes", { event: "*", schema: "public", table: "transaksi_kas" }, loadData)
-    .on("postgres_changes", { event: "*", schema: "public", table: "pengeluaran" }, loadData)
-    .on("postgres_changes", { event: "*", schema: "public", table: "config_kas" }, loadData)
-    .on("postgres_changes", { event: "*", schema: "public", table: "anggota" }, loadData)
-    .subscribe()
-
-// Keyboard shortcut untuk admin (Ctrl+Shift+A)
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        role = 'admin'
-        adminPanel.classList.remove('hidden')
-    }
-})
-</script>
-
-</body>
-</html>
+    .on("postgres_changes", { event: "*", schema
